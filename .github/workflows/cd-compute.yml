@@ -28,5 +28,5 @@ jobs:
       - run: sam build
 
       - name: Deploy app
-        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name ${{ github.ref_name }}-compute-jcloudify-deploy-app --capabilities CAPABILITY_IAM --parameter-overrides Env=${{ github.ref_name }} --resolve-s3 --tags app=jcloudify-api env=${{ github.ref_name }} user:poja=jcloudify-api
+        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --stack-name ${{ github.ref_name }}-compute-jcloudify-deploy-app --capabilities CAPABILITY_IAM --resolve-image-repos --parameter-overrides Env=${{ github.ref_name }} --resolve-s3 --tags app=jcloudify-api env=${{ github.ref_name }} user:poja=jcloudify-api
 
