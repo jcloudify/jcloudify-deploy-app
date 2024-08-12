@@ -75,28 +75,33 @@ def set_write_permission(directory):
             os.chmod(os.path.join(root, f), stat.S_IWUSR | stat.S_IRUSR)
 
 
+def execute_commands(commands):
+    results = []
+
+    for command in commands:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+        results.append(
+            {
+                "command": command,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
+            }
+        )
+
+    return results
+
+
 def deploy_app(app_name, env):
     stack_name = f"{env}-compute-{app_name}"
-    deployment_args = [
-        "nohup",
-        "sam",
-        "deploy",
-        "--no-confirm-changeset",
-        "--no-fail-on-empty-changeset",
-        "--capabilities",
-        "CAPABILITY_IAM",
-        "--resolve-s3",
-        "--stack-name",
-        stack_name,
-        "--parameter-overrides",
-        f"Env={env}",
-        "--tags",
-        f"app={app_name}",
-        f"env={env}",
-        f"user:poja={app_name}",
+    deployment_command = [
+        f"cd /tmp && export HOME=/tmp && sam deploy --no-confirm-changeset "
+        f"--no-fail-on-empty-changeset --capabilities CAPABILITY_IAM "
+        f"--resolve-s3 --stack-name {stack_name}--parameter-overrides "
+        f"Env={env} --tags app={app_name} env={env} user:poja={app_name}",
     ]
-    os.chdir(TMP_DIR_PATH)
-    subprocess.run(deployment_args, capture_output=False, text=False, env={'HOME': "/tmp"})
+    print(execute_commands(deployment_command))
 
 
 def process(app_name, env, bucket_key):

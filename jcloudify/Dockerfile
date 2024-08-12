@@ -10,8 +10,6 @@ RUN curl -Lo /tmp/sam-installation.zip https://github.com/aws/aws-sam-cli/releas
     && /tmp/sam-installation/install \
     && rm -rf /tmp/sam-installation /tmp/sam-installation.zip
 
-RUN sam --version
-
 COPY requirements.txt ./
 RUN python3.9 -m pip install -r requirements.txt -t .
 
