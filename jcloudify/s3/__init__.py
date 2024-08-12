@@ -1,9 +1,11 @@
 import boto3
 from botocore.exceptions import ClientError
+import tempfile
+import os
 
 
 def get_s3_client():
-    return boto3.client('s3')
+    return boto3.client("s3")
 
 
 def check_if_file_exists(bucket_name, key):
@@ -11,18 +13,22 @@ def check_if_file_exists(bucket_name, key):
         get_s3_client().head_object(Bucket=bucket_name, Key=key)
         return True
     except ClientError as e:
-        if e.response['Error']['Code'] == '404':
+        if e.response["Error"]["Code"] == "404":
             return False
         else:
             raise e
 
 
-def download_file_from_bucket(bucket_name, key, download_path):
+def download_file_from_bucket(bucket_name, key):
     file_exists = check_if_file_exists(bucket_name, key)
+
     try:
         if file_exists:
-            get_s3_client().download_file(bucket_name, key, download_path)
-            return download_path
+            with tempfile.NamedTemporaryFile(
+                delete=False, dir="/tmp"
+            ) as downloaded_file:
+                get_s3_client().download_file(bucket_name, key, downloaded_file)
+                return os.path.dirname(downloaded_file.name)
         else:
             raise FileExistsError(f"The file {key} does not exist.")
     except ClientError as e:
