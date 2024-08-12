@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 import zipfile
 import os
+import stat
 
 TMP_DIR_PATH = "/tmp"
 
@@ -63,6 +64,17 @@ def unzip_build_file(zip_path, destination_path):
         zip_ref.extractall(destination_path)
 
 
+def set_write_permission(directory):
+    for root, dirs, files in os.walk(directory):
+        os.chmod(root, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
+
+        for d in dirs:
+            os.chmod(os.path.join(root, d), stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
+
+        for f in files:
+            os.chmod(os.path.join(root, f), stat.S_IWUSR | stat.S_IRUSR)
+
+
 def deploy_app(app_name, env):
     stack_name = f"{env}-compute-{app_name}"
     deployment_args = [
@@ -84,11 +96,12 @@ def deploy_app(app_name, env):
         f"user:poja={app_name}",
     ]
     os.chdir(TMP_DIR_PATH)
-    subprocess.run(deployment_args, capture_output=False, text=False)
+    subprocess.run(deployment_args, capture_output=False, text=False, env={'HOME': "/tmp"})
 
 
 def process(app_name, env, bucket_key):
     bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
     zip_build_file = download_file_from_bucket(bucket_name, bucket_key)
     unzip_build_file(zip_build_file, TMP_DIR_PATH)
+    set_write_permission(f"{TMP_DIR_PATH}/.aws-sam")
     deploy_app(app_name, env)
