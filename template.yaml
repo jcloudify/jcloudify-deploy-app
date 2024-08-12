@@ -4,7 +4,7 @@ Description: jcloudify-deploy-app
 
 Globals:
   Function:
-    Timeout: 30
+    Timeout: 300
     MemorySize: 128
     VpcConfig:
       SecurityGroupIds:
@@ -13,6 +13,9 @@ Globals:
         - !Sub '{{resolve:ssm:/jcloudify-api/private/subnet1/id}}'
         - !Sub '{{resolve:ssm:/jcloudify-api/private/subnet2/id}}'
     Tracing: Active
+    Environment:
+      Variables:
+        AWS_S3_BUCKET_NAME: !Sub '{{resolve:ssm:/jcloudify-api/${Env}/s3/bucket-name}}'
 
 Parameters:
   Env:

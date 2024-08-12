@@ -5,6 +5,8 @@ from botocore.exceptions import ClientError
 import zipfile
 import os
 
+TMP_DIR_PATH = "/tmp"
+
 
 def lambda_handler(event, context):
     query_params = event.get("queryStringParameters", {})
@@ -39,7 +41,6 @@ def check_if_file_exists(bucket_name, key):
 
 def download_file_from_bucket(bucket_name, key):
     file_exists = check_if_file_exists(bucket_name, key)
-
     try:
         destination_file_path = f"/tmp/{get_filename_from_bucket_key(key)}"
         if file_exists:
@@ -82,12 +83,12 @@ def deploy_app(app_name, env):
         f"env={env}",
         f"user:poja={app_name}",
     ]
+    os.chdir(TMP_DIR_PATH)
     subprocess.run(deployment_args, capture_output=False, text=False)
 
 
 def process(app_name, env, bucket_key):
     bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
     zip_build_file = download_file_from_bucket(bucket_name, bucket_key)
-    unzip_build_file(zip_build_file, "/tmp/")
-    os.chdir("/tmp/")
+    unzip_build_file(zip_build_file, TMP_DIR_PATH)
     deploy_app(app_name, env)
