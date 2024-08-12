@@ -98,7 +98,7 @@ def deploy_app(app_name, env):
     deployment_command = [
         f"cd /tmp && export HOME=/tmp && sam deploy --no-confirm-changeset "
         f"--no-fail-on-empty-changeset --capabilities CAPABILITY_IAM "
-        f"--resolve-s3 --stack-name {stack_name}--parameter-overrides "
+        f"--resolve-s3 --stack-name {stack_name} --parameter-overrides "
         f"Env={env} --tags app={app_name} env={env} user:poja={app_name}",
     ]
     print(execute_commands(deployment_command))
