@@ -10,11 +10,14 @@ TMP_DIR_PATH = "/tmp"
 
 
 def lambda_handler(event, context):
-    query_params = event.get("queryStringParameters", {})
-    app_name = query_params.get("app_name")
-    env = query_params.get("env")
-    bucket_key = query_params.get("bucket_key")
-    process(app_name, env, bucket_key)
+    for records in event["Records"]:
+        body = json.loads(records["body"])
+        detail = body["detail"]
+        app_name = detail.get("appName")
+        env = detail.get("environmentType")
+        bucket_key = detail.get("formattedBucketKey")
+        process(app_name, env, bucket_key)
+
     return {
         "statusCode": 200,
         "body": json.dumps(
@@ -76,21 +79,10 @@ def set_write_permission(directory):
 
 
 def execute_commands(commands):
-    results = []
-
     for command in commands:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-
-        results.append(
-            {
-                "command": command,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
-            }
+        subprocess.Popen(
+            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-
-    return results
 
 
 def deploy_app(app_name, env):
@@ -99,9 +91,9 @@ def deploy_app(app_name, env):
         f"cd /tmp && export HOME=/tmp && sam deploy --no-confirm-changeset "
         f"--no-fail-on-empty-changeset --capabilities CAPABILITY_IAM "
         f"--resolve-s3 --stack-name {stack_name} --parameter-overrides "
-        f"Env={env} --tags app={app_name} env={env} user:poja={app_name}",
+        f"Env={env} --tags app={app_name} env={env} user:poja={app_name} &",
     ]
-    print(execute_commands(deployment_command))
+    execute_commands(deployment_command)
 
 
 def process(app_name, env, bucket_key):

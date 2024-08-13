@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: jcloudify-deploy-app
+Description: jcloudify-app-deployer
 
 Globals:
   Function:
@@ -22,7 +22,7 @@ Parameters:
     Type: String
 
 Resources:
-  HelloWorldFunction:
+  DeployerFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
@@ -30,11 +30,11 @@ Resources:
       Architectures:
         - x86_64
       Events:
-        HelloWorld:
-          Type: Api
+        AllEvents:
+          Type: SQS
           Properties:
-            Path: /hello
-            Method: get
+            Queue: !Sub '{{resolve:ssm:/jcloudify-app-deployer/${Env}/sqs/mailbox-queue-arn}}'
+            BatchSize: 5
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: ./jcloudify
@@ -53,8 +53,3 @@ Resources:
     Properties:
       ResourceGroupName: !Ref ApplicationResourceGroup
       AutoConfigurationEnabled: 'true'
-
-Outputs:
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
