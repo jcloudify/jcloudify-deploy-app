@@ -10,7 +10,9 @@ TMP_DIR_PATH = "/tmp"
 
 
 def lambda_handler(event, context):
+    print(f"Received event: {json.dumps(event)}")
     for records in event["Records"]:
+        print(f"Received records: {json.dumps(records)}")
         body = json.loads(records["body"])
         detail = body["detail"]
         app_name = detail.get("app_name")
@@ -48,6 +50,7 @@ def download_file_from_bucket(bucket_name, key):
     try:
         destination_file_path = f"/tmp/{get_filename_from_bucket_key(key)}"
         if file_exists:
+            print(f"Downloading {key} to {destination_file_path}")
             get_s3_client().download_file(bucket_name, key, destination_file_path)
             return destination_file_path
         else:
@@ -63,6 +66,7 @@ def get_filename_from_bucket_key(bucket_key):
 
 
 def unzip_build_file(zip_path, destination_path):
+    print(f"Unzipping {zip_path} build file")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_path)
 
@@ -87,6 +91,7 @@ def execute_commands(commands):
 
 def deploy_app(app_name, env):
     stack_name = f"{env}-compute-{app_name}"
+    print(f"Deploying {stack_name}")
     deployment_command = [
         f"cd /tmp && export HOME=/tmp && sam deploy --no-confirm-changeset "
         f"--no-fail-on-empty-changeset --capabilities CAPABILITY_IAM "
