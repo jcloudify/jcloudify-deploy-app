@@ -13,9 +13,9 @@ def lambda_handler(event, context):
     for records in event["Records"]:
         body = json.loads(records["body"])
         detail = body["detail"]
-        app_name = detail.get("appName")
-        env = detail.get("environmentType")
-        bucket_key = detail.get("formattedBucketKey")
+        app_name = detail.get("app_name")
+        env = detail.get("environment_type")
+        bucket_key = detail.get("formatted_bucket_key")
         process(app_name, env, bucket_key)
 
     return {
