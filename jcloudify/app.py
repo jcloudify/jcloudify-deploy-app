@@ -16,9 +16,9 @@ def lambda_handler(event, context):
         body = json.loads(records["body"])
         detail = body["detail"]
         app_name = detail.get("app_name")
-        env = detail.get("environment_type")
+        env: str = detail.get("environment_type")
         bucket_key = detail.get("formatted_bucket_key")
-        process(app_name, env, bucket_key)
+        process(app_name, env.lower(), bucket_key)
 
     return {
         "statusCode": 200,
