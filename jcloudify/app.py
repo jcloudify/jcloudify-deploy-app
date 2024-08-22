@@ -1,5 +1,5 @@
 import json
-import subprocess
+from subprocess import Popen, PIPE
 import boto3
 from botocore.exceptions import ClientError
 import zipfile
@@ -82,26 +82,10 @@ def set_write_permission(directory):
             os.chmod(os.path.join(root, f), stat.S_IWUSR | stat.S_IRUSR)
 
 
-# def execute_commands(commands):
-#     for command in commands:
-#         subprocess.Popen(
-#             command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-#         )
-
-
 def execute_commands(commands):
-    results = []
     for command in commands:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        results.append(
-            {
-                "command": command,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
-            }
-        )
-    return results
+        Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+        print("Deployment successfully triggered")
 
 
 def deploy_app(app_name, env):
@@ -113,7 +97,8 @@ def deploy_app(app_name, env):
         f"--resolve-s3 --stack-name {stack_name} --parameter-overrides "
         f"Env={env} --tags app={app_name} env={env} user:poja={app_name} &",
     ]
-    print(execute_commands(deployment_command))
+    execute_commands(deployment_command)
+    print("Here I am now bro")
 
 
 def process(app_name, env, bucket_key):
