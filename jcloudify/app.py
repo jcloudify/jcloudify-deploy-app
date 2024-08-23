@@ -83,9 +83,21 @@ def set_write_permission(directory):
 
 
 def execute_commands(commands):
+    results = []
     for command in commands:
-        Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
-        print("Deployment successfully triggered")
+        result = Popen(command, shell=True, stdout=PIPE, stderr=PIPE)
+
+        stdout, stderr = result.communicate()
+
+        results.append(
+            {
+                "command": command,
+                "stdout": stdout,
+                "stderr": stderr,
+                "return_code": result.returncode,
+            }
+        )
+    return results
 
 
 def deploy_app(app_name, env):
@@ -97,8 +109,7 @@ def deploy_app(app_name, env):
         f"--resolve-s3 --stack-name {stack_name} --parameter-overrides "
         f"Env={env} --tags app={app_name} env={env} user:poja={app_name} &",
     ]
-    execute_commands(deployment_command)
-    print("Here I am now bro")
+    print(execute_commands(deployment_command))
 
 
 def process(app_name, env, bucket_key):
