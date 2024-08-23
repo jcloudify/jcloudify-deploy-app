@@ -7,6 +7,8 @@ import os
 import stat
 
 TMP_DIR_PATH = "/tmp"
+API_EVENT_SOURCE = "api.jcloudify.app.event1"
+EVENT_STACK_TARGET = "EVENT_STACK_1"
 
 
 def lambda_handler(event, context):
@@ -16,9 +18,13 @@ def lambda_handler(event, context):
         body = json.loads(records["body"])
         detail = body["detail"]
         app_name = detail.get("app_name")
-        env: str = detail.get("environment_type")
+        env_name: str = detail.get("environment_type")
         bucket_key = detail.get("formatted_bucket_key")
-        process(app_name, env.lower(), bucket_key)
+        app_id = detail.get("app_id")
+        user_id = detail.get("user_id")
+        env_id = detail.get("env_id")
+        process(app_name, env_name.lower(), bucket_key)
+        send_event(user_id, app_id, env_id, env_name.lower(), app_name)
 
     return {
         "statusCode": 200,
@@ -98,6 +104,41 @@ def execute_commands(commands):
             }
         )
     return results
+
+
+def get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name):
+    data = {
+        "userId": user_id,
+        "appId": app_id,
+        "envId": env_id,
+        "stackName": stack_name,
+        "eventSource": API_EVENT_SOURCE,
+        "eventStack": EVENT_STACK_TARGET,
+    }
+    return data
+
+
+def get_event_bridge_client():
+    return boto3.client("events")
+
+
+def send_event(user_id, app_id, env_id, env, app_name):
+    stack_name = f"{env}-compute-{app_name}"
+    event_bus_name = os.getenv("AWS_EVENTBRIDGE_BUS")
+    event_bridge_client = get_event_bridge_client()
+    data = get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name)
+    print(f"Events to send: {data}")
+    response = event_bridge_client.put_events(
+        Entries=[
+            {
+                "Source": API_EVENT_SOURCE,
+                "DetailType": "api.jcloudify.app.endpoint.event.model.ComputeStackCrupdated",
+                "Detail": json.dumps(data),
+                "EventBusName": event_bus_name,
+            },
+        ]
+    )
+    print(response)
 
 
 def deploy_app(app_name, env):

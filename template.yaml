@@ -16,6 +16,7 @@ Globals:
     Environment:
       Variables:
         AWS_S3_BUCKET_NAME: !Sub '{{resolve:ssm:/jcloudify-api/${Env}/s3/bucket-name}}'
+        AWS_EVENTBRIDGE_BUS: !Sub '{{resolve:ssm:/jcloudify-api/${Env}/eventbridge/bus-name}}'
 
 Parameters:
   Env:
