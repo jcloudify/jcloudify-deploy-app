@@ -5,10 +5,14 @@ from botocore.exceptions import ClientError
 import zipfile
 import os
 import stat
+import shutil
+import filecmp
 
 TMP_DIR_PATH = "/tmp"
 API_EVENT_SOURCE = "api.jcloudify.app.event1"
 EVENT_STACK_TARGET = "EVENT_STACK_1"
+DEPLOY_STACK_SOURCE_PATTERN = "app.jcloudify.app.deployer.event.deploy"
+CHECK_TEMPLATE_PATTERN = "app.jcloudify.app.deployer.event.check"
 
 
 def lambda_handler(event, context):
@@ -16,8 +20,12 @@ def lambda_handler(event, context):
     for records in event["Records"]:
         print(f"Received records: {json.dumps(records)}")
         body = json.loads(records["body"])
+        source = body["source"]
         detail = body["detail"]
-        process_deployment(detail)
+        if source == DEPLOY_STACK_SOURCE_PATTERN:
+            process_deployment(detail)
+        if source == CHECK_TEMPLATE_PATTERN:
+            print(process_template_check(detail))
 
     return {
         "statusCode": 200,
@@ -67,8 +75,8 @@ def get_filename_from_bucket_key(bucket_key):
     return os.path.basename(normalized_path)
 
 
-def unzip_build_file(zip_path, destination_path):
-    print(f"Unzipping {zip_path} build file")
+def unzip_file(zip_path, destination_path):
+    print(f"Unzipping {zip_path} file")
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_path)
 
@@ -139,8 +147,10 @@ def send_event(user_id, app_id, env_id, env, app_name):
 
 def get_built_project_from_s3(bucket_key):
     zip_build_file = download_file_from_bucket(bucket_key)
-    unzip_build_file(zip_build_file, TMP_DIR_PATH)
-    set_write_permission(f"{TMP_DIR_PATH}/.aws-sam")
+    unzip_file(zip_build_file, TMP_DIR_PATH)
+    project_path = f"{TMP_DIR_PATH}/.aws-sam"
+    set_write_permission(project_path)
+    return project_path
 
 
 def trigger_app_deployment(app_name, env):
@@ -169,3 +179,45 @@ def process_deployment(event_details):
     env_id = event_details.get("env_id")
     deploy_app(app_name, env_name.lower(), bucket_key)
     send_event(user_id, app_id, env_id, env_name.lower(), app_name)
+
+
+def get_mock_project_from_s3():
+    print("Get mock project from s3")
+    mock_project_bucket_key = os.getenv("MOCK_PROJECT_BUCKET_KEY")
+    mock_project_folder_name = os.getenv("MOCK_PROJECT_FOLDER_NAME")
+    zipped_mocked_project = download_file_from_bucket(mock_project_bucket_key)
+    unzip_file(zipped_mocked_project, TMP_DIR_PATH)
+    mock_project_folder_path = f"{TMP_DIR_PATH}/{mock_project_folder_name}"
+    set_write_permission(mock_project_folder_path)
+    return mock_project_folder_path
+
+
+def trigger_project_build(project_path):
+    execute_commands([f"cd {project_path} && chmod +x ./gradlew"])
+    print(
+        execute_commands(
+            [f"cd {project_path} && export HOME={project_path} && sam build"]
+        )
+    )
+
+
+def check_if_files_are_identical(file1, file2):
+    return filecmp.cmp(file1, file2, shallow=False)
+
+
+def process_template_check(event_details):
+    built_project_bucket_key = event_details.get("built_project_bucket_key")
+    template_file_bucket_key = event_details.get("template_file_bucket_key")
+    mock_project_path = get_mock_project_from_s3()
+    original_template_file_path = download_file_from_bucket(template_file_bucket_key)
+    shutil.copy(original_template_file_path, f"{mock_project_path}/template.yml")
+    print("Trigger project build")
+    print(trigger_project_build(mock_project_path))
+    project_path = get_built_project_from_s3(built_project_bucket_key)
+    print("Built project successfully downloaded: {}".format(project_path))
+    project_built_template = f"{project_path}/build/template.yaml"
+    generated_built_template = f"{mock_project_path}/.aws-sam/build/template.yaml"
+    print("Check files")
+    return check_if_files_are_identical(
+        project_built_template, generated_built_template
+    )
