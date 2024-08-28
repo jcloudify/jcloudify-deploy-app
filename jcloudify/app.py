@@ -126,23 +126,30 @@ def get_event_bridge_client():
     return boto3.client("events")
 
 
-def send_event(user_id, app_id, env_id, env, app_name):
-    stack_name = f"{env}-compute-{app_name}"
+def send_event(event_details, event_detail_type):
     event_bus_name = os.getenv("AWS_EVENTBRIDGE_BUS")
     event_bridge_client = get_event_bridge_client()
-    data = get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name)
-    print(f"Events to send: {data}")
+    print(f"Events to send: {event_details}")
     response = event_bridge_client.put_events(
         Entries=[
             {
                 "Source": API_EVENT_SOURCE,
-                "DetailType": "api.jcloudify.app.endpoint.event.model.ComputeStackCrupdated",
-                "Detail": json.dumps(data),
+                "DetailType": event_detail_type,
+                "Detail": json.dumps(event_details),
                 "EventBusName": event_bus_name,
             },
         ]
     )
     print(response)
+
+
+def send_stack_crupdated_event(user_id, app_id, env_id, env, app_name):
+    stack_name = f"{env}-compute-{app_name}"
+    details = get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name)
+    stack_crupdated_event_detail_type = (
+        "api.jcloudify.app.endpoint.event.model.ComputeStackCrupdated"
+    )
+    send_event(details, stack_crupdated_event_detail_type)
 
 
 def get_built_project_from_s3(bucket_key):
@@ -178,7 +185,7 @@ def process_deployment(event_details):
     user_id = event_details.get("user_id")
     env_id = event_details.get("env_id")
     deploy_app(app_name, env_name.lower(), bucket_key)
-    send_event(user_id, app_id, env_id, env_name.lower(), app_name)
+    send_stack_crupdated_event(user_id, app_id, env_id, env_name.lower(), app_name)
 
 
 def get_mock_project_from_s3():
