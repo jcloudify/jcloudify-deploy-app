@@ -110,7 +110,7 @@ def execute_commands(commands):
     return results
 
 
-def get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name):
+def get_compute_stack_crupdated_event_model(user_id, app_id, env_id, stack_name):
     data = {
         "userId": user_id,
         "appId": app_id,
@@ -118,6 +118,27 @@ def get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name):
         "stackName": stack_name,
         "eventSource": API_EVENT_SOURCE,
         "eventStack": EVENT_STACK_TARGET,
+    }
+    return data
+
+
+def get_template_integrity_check_done_event_model(
+    user_id,
+    app_id,
+    env_id,
+    built_project_bucket_key,
+    built_env_info,
+    deployment_conf_id,
+    status,
+):
+    data = {
+        "userId": user_id,
+        "appId": app_id,
+        "envId": env_id,
+        "builtProjectBucketKey": built_project_bucket_key,
+        "builtEnvInfo": built_env_info,
+        "deploymentConfId": deployment_conf_id,
+        "status": status,
     }
     return data
 
@@ -145,7 +166,9 @@ def send_event(event_details, event_detail_type):
 
 def send_stack_crupdated_event(user_id, app_id, env_id, env, app_name):
     stack_name = f"{env}-compute-{app_name}"
-    details = get_compute_stack_crupdated_event(user_id, app_id, env_id, stack_name)
+    details = get_compute_stack_crupdated_event_model(
+        user_id, app_id, env_id, stack_name
+    )
     stack_crupdated_event_detail_type = (
         "api.jcloudify.app.endpoint.event.model.ComputeStackCrupdated"
     )
@@ -215,6 +238,11 @@ def check_if_files_are_identical(file1, file2):
 def process_template_check(event_details):
     built_project_bucket_key = event_details.get("built_project_bucket_key")
     template_file_bucket_key = event_details.get("template_file_bucket_key")
+    app_id = event_details.get("app_id")
+    user_id = event_details.get("user_id")
+    env_id = event_details.get("env_id")
+    built_env_info = event_details.get("built_env_info")
+    deployment_conf_id = event_details.get("deployment_conf_id")
     mock_project_path = get_mock_project_from_s3()
     original_template_file_path = download_file_from_bucket(template_file_bucket_key)
     shutil.copy(original_template_file_path, f"{mock_project_path}/template.yml")
@@ -225,6 +253,21 @@ def process_template_check(event_details):
     project_built_template = f"{project_path}/build/template.yaml"
     generated_built_template = f"{mock_project_path}/.aws-sam/build/template.yaml"
     print("Check files")
-    return check_if_files_are_identical(
+    to_send_event_detail_type = (
+        "api.jcloudify.app.endpoint.rest.model.BuiltEnvInfo.TemplateIntegrityCheckDone"
+    )
+    check_result = check_if_files_are_identical(
         project_built_template, generated_built_template
     )
+    print(f"Is file authentic: {check_result}")
+    integrity_status = "AUTHENTIC" if check_result else "CORRUPTED"
+    to_send_event_details = get_template_integrity_check_done_event_model(
+        user_id,
+        app_id,
+        env_id,
+        built_project_bucket_key,
+        built_env_info,
+        deployment_conf_id,
+        integrity_status,
+    )
+    send_event(to_send_event_details, to_send_event_detail_type)
