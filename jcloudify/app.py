@@ -254,7 +254,7 @@ def process_template_check(event_details):
     generated_built_template = f"{mock_project_path}/.aws-sam/build/template.yaml"
     print("Check files")
     to_send_event_detail_type = (
-        "api.jcloudify.app.endpoint.rest.model.BuiltEnvInfo.TemplateIntegrityCheckDone"
+        "api.jcloudify.app.endpoint.event.model.TemplateIntegrityCheckDone"
     )
     check_result = check_if_files_are_identical(
         project_built_template, generated_built_template
