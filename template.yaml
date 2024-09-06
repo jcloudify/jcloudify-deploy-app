@@ -5,7 +5,7 @@ Description: jcloudify-app-deployer
 Globals:
   Function:
     Timeout: 900
-    MemorySize: 1024
+    MemorySize: 2048
     VpcConfig:
       SecurityGroupIds:
         - !Sub '{{resolve:ssm:/jcloudify-api/sg/id}}'
