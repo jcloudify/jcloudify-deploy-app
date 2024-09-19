@@ -110,12 +110,15 @@ def execute_commands(commands):
     return results
 
 
-def get_compute_stack_crupdated_event_model(user_id, app_id, env_id, stack_name):
+def get_compute_stack_crupdated_event_model(
+    user_id, app_id, env_id, stack_name, app_env_deployment_id
+):
     data = {
         "userId": user_id,
         "appId": app_id,
         "envId": env_id,
         "stackName": stack_name,
+        "appEnvDeploymentId": app_env_deployment_id,
         "eventSource": API_EVENT_SOURCE,
         "eventStack": EVENT_STACK_TARGET,
     }
@@ -130,6 +133,7 @@ def get_template_integrity_check_done_event_model(
     built_env_info,
     deployment_conf_id,
     status,
+    app_env_deployment_id,
 ):
     data = {
         "userId": user_id,
@@ -139,6 +143,7 @@ def get_template_integrity_check_done_event_model(
         "builtEnvInfo": built_env_info,
         "deploymentConfId": deployment_conf_id,
         "status": status,
+        "app_env_deployment_id": app_env_deployment_id,
     }
     return data
 
@@ -164,10 +169,16 @@ def send_event(event_details, event_detail_type):
     print(response)
 
 
-def send_stack_crupdated_event(user_id, app_id, env_id, env, app_name):
+def send_stack_crupdated_event(
+    user_id, app_id, env_id, env, app_name, app_env_deployment_id
+):
     stack_name = f"{env}-compute-{app_name}"
     details = get_compute_stack_crupdated_event_model(
-        user_id, app_id, env_id, stack_name
+        user_id,
+        app_id,
+        env_id,
+        stack_name,
+        app_env_deployment_id,
     )
     stack_crupdated_event_detail_type = (
         "api.jcloudify.app.endpoint.event.model.ComputeStackCrupdated"
@@ -207,8 +218,11 @@ def process_deployment(event_details):
     app_id = event_details.get("app_id")
     user_id = event_details.get("user_id")
     env_id = event_details.get("env_id")
+    app_env_deployment_id = event_details.get("app_env_deployment_id")
     deploy_app(app_name, env_name.lower(), bucket_key)
-    send_stack_crupdated_event(user_id, app_id, env_id, env_name.lower(), app_name)
+    send_stack_crupdated_event(
+        user_id, app_id, env_id, env_name.lower(), app_name, app_env_deployment_id
+    )
 
 
 def get_mock_project_from_s3():
@@ -243,6 +257,7 @@ def process_template_check(event_details):
     env_id = event_details.get("env_id")
     built_env_info = event_details.get("built_env_info")
     deployment_conf_id = event_details.get("deployment_conf_id")
+    app_env_deployment_id = event_details.get("app_env_deployment_id")
     mock_project_path = get_mock_project_from_s3()
     original_template_file_path = download_file_from_bucket(template_file_bucket_key)
     shutil.copy(original_template_file_path, f"{mock_project_path}/template.yml")
@@ -269,5 +284,6 @@ def process_template_check(event_details):
         built_env_info,
         deployment_conf_id,
         integrity_status,
+        app_env_deployment_id,
     )
     send_event(to_send_event_details, to_send_event_detail_type)
