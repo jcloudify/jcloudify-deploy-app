@@ -111,7 +111,7 @@ def execute_commands(commands):
 
 
 def get_compute_stack_crupdated_event_model(
-    user_id, app_id, env_id, stack_name, app_env_deployment_id
+    user_id, app_id, env_id, stack_name, app_env_deployment_id, stack_deployment_state
 ):
     data = {
         "userId": user_id,
@@ -119,6 +119,7 @@ def get_compute_stack_crupdated_event_model(
         "envId": env_id,
         "stackName": stack_name,
         "appEnvDeploymentId": app_env_deployment_id,
+        "stack_deployment_state": stack_deployment_state,
         "eventSource": API_EVENT_SOURCE,
         "eventStack": EVENT_STACK_TARGET,
     }
@@ -170,7 +171,13 @@ def send_event(event_details, event_detail_type):
 
 
 def send_stack_crupdated_event(
-    user_id, app_id, env_id, env, app_name, app_env_deployment_id
+    user_id,
+    app_id,
+    env_id,
+    env,
+    app_name,
+    app_env_deployment_id,
+    stack_deployment_state,
 ):
     stack_name = f"{env}-compute-{app_name}"
     details = get_compute_stack_crupdated_event_model(
@@ -179,6 +186,7 @@ def send_stack_crupdated_event(
         env_id,
         stack_name,
         app_env_deployment_id,
+        stack_deployment_state,
     )
     stack_crupdated_event_detail_type = (
         "api.jcloudify.app.endpoint.event.model.ComputeStackCrupdated"
@@ -203,12 +211,20 @@ def trigger_app_deployment(app_name, env):
         f"--resolve-s3 --stack-name {stack_name} --parameter-overrides "
         f"Env={env} --tags app={app_name} env={env} user:poja={app_name} &",
     ]
-    print(execute_commands(deployment_command))
+    result = execute_commands(deployment_command)
+    return result[-1]["stdout"]
 
 
 def deploy_app(app_name, env, bucket_key):
     get_built_project_from_s3(bucket_key)
-    trigger_app_deployment(app_name, env)
+    return trigger_app_deployment(app_name, env)
+
+
+def is_deployment_successful(stdout, stack_name):
+    substring = f"Successfully created/updated stack - {stack_name} in eu-west-3"
+    if substring in stdout:
+        return "CRUPDATE_SUCCESS"
+    return "CRUPDATE_FAILED"
 
 
 def process_deployment(event_details):
@@ -219,9 +235,15 @@ def process_deployment(event_details):
     user_id = event_details.get("user_id")
     env_id = event_details.get("env_id")
     app_env_deployment_id = event_details.get("app_env_deployment_id")
-    deploy_app(app_name, env_name.lower(), bucket_key)
+    deployment_result = deploy_app(app_name.lower(), env_name.lower(), bucket_key)
     send_stack_crupdated_event(
-        user_id, app_id, env_id, env_name.lower(), app_name, app_env_deployment_id
+        user_id,
+        app_id,
+        env_id,
+        env_name.lower(),
+        app_name.lower(),
+        app_env_deployment_id,
+        deployment_result,
     )
 
 
