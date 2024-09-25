@@ -170,6 +170,10 @@ def send_event(event_details, event_detail_type):
     print(response)
 
 
+def get_stack_name(env, app_name):
+    return f"{env.lower()}-compute-{app_name.lower()}"
+
+
 def send_stack_crupdated_event(
     user_id,
     app_id,
@@ -179,7 +183,7 @@ def send_stack_crupdated_event(
     app_env_deployment_id,
     stack_deployment_state,
 ):
-    stack_name = f"{env}-compute-{app_name}"
+    stack_name = get_stack_name(env, app_name)
     details = get_compute_stack_crupdated_event_model(
         user_id,
         app_id,
@@ -203,7 +207,7 @@ def get_built_project_from_s3(bucket_key):
 
 
 def trigger_app_deployment(app_name, env):
-    stack_name = f"{env}-compute-{app_name}"
+    stack_name = get_stack_name(env, app_name)
     print(f"Deploying {stack_name}")
     deployment_command = [
         f"cd /tmp && export HOME=/tmp && sam deploy --no-confirm-changeset "
@@ -222,7 +226,7 @@ def deploy_app(app_name, env, bucket_key):
 
 def is_deployment_successful(stdout, stack_name):
     substring = f"Successfully created/updated stack - {stack_name} in eu-west-3"
-    if substring in stdout:
+    if substring in str(stdout):
         return "CRUPDATE_SUCCESS"
     return "CRUPDATE_FAILED"
 
@@ -235,7 +239,9 @@ def process_deployment(event_details):
     user_id = event_details.get("user_id")
     env_id = event_details.get("env_id")
     app_env_deployment_id = event_details.get("app_env_deployment_id")
+    stack_name = get_stack_name(env_name.lower(), app_name.lower())
     deployment_result = deploy_app(app_name.lower(), env_name.lower(), bucket_key)
+    deployment_state = is_deployment_successful(deployment_result, stack_name)
     send_stack_crupdated_event(
         user_id,
         app_id,
@@ -243,7 +249,7 @@ def process_deployment(event_details):
         env_name.lower(),
         app_name.lower(),
         app_env_deployment_id,
-        deployment_result,
+        deployment_state,
     )
 
 
