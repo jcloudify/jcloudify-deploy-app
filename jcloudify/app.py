@@ -216,6 +216,7 @@ def trigger_app_deployment(app_name, env):
         f"Env={env} --tags app={app_name} env={env} user:poja={app_name} &",
     ]
     result = execute_commands(deployment_command)
+    print(result)
     return result[-1]["stdout"]
 
 
