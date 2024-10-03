@@ -1,4 +1,4 @@
-# deploy-app
+# jcloudify-app-deployer
 
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
@@ -43,7 +43,7 @@ You can find your API Gateway Endpoint URL in the output values displayed after 
 Build your application with the `sam build` command.
 
 ```bash
-deploy-app$ sam build
+jcloudify-app-deployer$ sam build
 ```
 
 The SAM CLI builds a docker image from a Dockerfile and then installs dependencies defined in `jcloudify/requirements.txt` inside the docker image. The processed template file is saved in the `.aws-sam/build` folder.
@@ -53,14 +53,14 @@ Test a single function by invoking it directly with a test event. An event is a 
 Run functions locally and invoke them with the `sam local invoke` command.
 
 ```bash
-deploy-app$ sam local invoke HelloWorldFunction --event events/event.json
+jcloudify-app-deployer$ sam local invoke HelloWorldFunction --event events/event.json
 ```
 
 The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
 
 ```bash
-deploy-app$ sam local start-api
-deploy-app$ curl http://localhost:3000/
+jcloudify-app-deployer$ sam local start-api
+jcloudify-app-deployer$ curl http://localhost:3000/
 ```
 
 The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
@@ -84,7 +84,7 @@ To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs`
 `NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
 
 ```bash
-deploy-app$ sam logs -n HelloWorldFunction --stack-name "deploy-app" --tail
+jcloudify-app-deployer$ sam logs -n HelloWorldFunction --stack-name "jcloudify-app-deployer" --tail
 ```
 
 You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
@@ -94,8 +94,8 @@ You can find more information and examples about filtering Lambda function logs 
 Tests are defined in the `tests` folder in this project. Use PIP to install the [pytest](https://docs.pytest.org/en/latest/) and run unit tests from your local machine.
 
 ```bash
-deploy-app$ pip install pytest pytest-mock --user
-deploy-app$ python -m pytest tests/ -v
+jcloudify-app-deployer$ pip install pytest pytest-mock --user
+jcloudify-app-deployer$ python -m pytest tests/ -v
 ```
 
 ## Cleanup
@@ -103,7 +103,7 @@ deploy-app$ python -m pytest tests/ -v
 To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
 
 ```bash
-sam delete --stack-name "deploy-app"
+sam delete --stack-name "jcloudify-app-deployer"
 ```
 
 ## Resources
