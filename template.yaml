@@ -6,6 +6,8 @@ Globals:
   Function:
     Timeout: 900
     MemorySize: 2048
+    EphemeralStorage:
+      Size: 2048
     VpcConfig:
       SecurityGroupIds:
         - !Sub '{{resolve:ssm:/jcloudify-api/sg/id}}'
